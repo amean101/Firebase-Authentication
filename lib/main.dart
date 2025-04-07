@@ -173,10 +173,16 @@ class _EmailPasswordFormState extends State<EmailPasswordForm> {
         password: _passwordController.text,
       );
       setState(() {
-        _success = true;
-        _userEmail = _emailController.text;
-        _initialState = false;
-      });
+  _success = true;
+  _userEmail = _emailController.text;
+  _initialState = false;
+});
+Navigator.pushReplacement(
+  context,
+  MaterialPageRoute(
+    builder: (context) => ProfileScreen(),
+  ),
+);
     } catch (e) {
       setState(() {
         _success = false;
@@ -246,3 +252,102 @@ class _EmailPasswordFormState extends State<EmailPasswordForm> {
     );
   }
 }
+
+class ProfileScreen extends StatelessWidget {
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  @override
+  Widget build(BuildContext context) {
+    final user = _auth.currentUser;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Profile'),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.logout),
+            onPressed: () async {
+              await _auth.signOut();
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => MyHomePage(title: 'Firebase Auth Demo')),
+              );
+            },
+          )
+        ],
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            Text('Logged in as: ${user?.email ?? "No Email"}',
+                style: TextStyle(fontSize: 18)),
+            SizedBox(height: 24),
+            ChangePasswordForm(),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class ChangePasswordForm extends StatefulWidget {
+  @override
+  _ChangePasswordFormState createState() => _ChangePasswordFormState();
+}
+
+class _ChangePasswordFormState extends State<ChangePasswordForm> {
+  final TextEditingController _passwordController = TextEditingController();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final _formKey = GlobalKey<FormState>();
+  String _statusMessage = '';
+
+  Future<void> _changePassword() async {
+    try {
+      await _auth.currentUser!.updatePassword(_passwordController.text);
+      setState(() {
+        _statusMessage = 'Password changed successfully';
+      });
+    } catch (e) {
+      setState(() {
+        _statusMessage = 'Password change failed: ${e.toString()}';
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Form(
+      key: _formKey,
+      child: Column(
+        children: [
+          TextFormField(
+            controller: _passwordController,
+            decoration: InputDecoration(labelText: 'New Password'),
+            obscureText: true,
+            validator: (value) {
+              if (value == null || value.length < 6) {
+                return 'Password must be at least 6 characters';
+              }
+              return null;
+            },
+          ),
+          SizedBox(height: 12),
+          ElevatedButton(
+            onPressed: () {
+              if (_formKey.currentState!.validate()) {
+                _changePassword();
+              }
+            },
+            child: Text('Change Password'),
+          ),
+          SizedBox(height: 12),
+          Text(_statusMessage,
+              style: TextStyle(color: _statusMessage.contains('successfully') ? Colors.green : Colors.red)),
+        ],
+      ),
+    );
+  }
+}
+
+
